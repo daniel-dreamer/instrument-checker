@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪器主板数据管理界面</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        h1::before {
+            content: "🔐 ";
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        .tips {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .upload-section {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-info {
+            margin-top: 15px;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .data-status {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            background: #f5f5f5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-item.ready {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-item.pending {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-icon {
+            font-size: 18px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-msg {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c62828;
+        }
+
+        .success-msg {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .data-preview {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .data-preview h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background: #667eea;
+            color: white;
+        }
+
+        .preview-table tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+
+        .action-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>仪器主板数据管理界面</h1>
+            <div class="subtitle">管理员专用 - 上传和管理仪器数据</div>
+
+            <div class="nav-links">
+                <a href="admin.html">🏠 管理界面</a>
+                <a href="query.html">🔍 查询界面</a>
+            </div>
+
+            <div class="tips">
+                <strong>📋 管理员操作说明：</strong><br>
+                1. 上传"生产和出货信息追溯"Excel文件（包含仪器序列号和主板物料号）<br>
+                2. 上传"主板型号和软件匹配关系"Excel文件（包含物料号、型号和软件版本）<br>
+                3. 点击"保存数据到系统"按钮，数据将被保存到浏览器本地存储<br>
+                4. 客户可以在查询界面使用这些数据
+            </div>
+
+            <div class="data-status" id="dataStatus">
+                <div class="status-item pending" id="mainDataStatus">
+                    <span class="status-icon">⏳</span>
+                    <span>主数据：未加载</span>
+                </div>
+                <div class="status-item pending" id="mappingDataStatus">
+                    <span class="status-icon">⏳</span>
+                    <span>匹配数据：未加载</span>
+                </div>
+            </div>
+
+            <div id="messageArea"></div>
+
+            <div class="upload-section">
+                <input type="file" id="mainDataFile" accept=".xlsx,.xls,.csv">
+                <button class="upload-btn" onclick="document.getElementById('mainDataFile').click()">
+                    📁 上传仪器数据文件
+                </button>
+                <div class="file-info" id="mainFileInfo"></div>
+            </div>
+
+            <div class="upload-section">
+                <input type="file" id="mappingDataFile" accept=".xlsx,.xls,.csv">
+                <button class="upload-btn" onclick="document.getElementById('mappingDataFile').click()">
+                    📁 上传软件匹配关系文件
+                </button>
+                <div class="file-info" id="mappingFileInfo"></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn save-btn" id="saveBtn" onclick="saveData()" disabled>
+                    💾 保存数据到系统
+                </button>
+                <button class="action-btn clear-btn" onclick="clearData()">
+                    🗑️ 清除所有数据
+                </button>
+            </div>
+
+            <div class="data-preview" id="dataPreview" style="display: none;">
+                <h3>数据预览（前5条记录）</h3>
+                <div id="previewContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据存储
+        let mainData = [];
+        let mappingData = [];
+        let isMainDataLoaded = false;
+        let isMappingDataLoaded = false;
+
+        // 可能的列名映射
+        const columnMappings = {
+            serialNumber: ['主机序列号', 'SN', '序列号', 'Serial Number', '仪器序列号', '设备序列号', 'S/N', 's/n', 'column_5'],
+            materialNumber: ['物料号', '主板物料号', '主板编号', '板号', 'Board Number', 'MB', 'Part Number', '主板IPN', 'IPN'],
+            model: ['型号', '主板型号', 'Model', 'Board Model'],
+            softwareVersion: ['可安装软件版本', '软件版本', 'Software Version', '版本']
+        };
+
+        // 页面加载时检查本地存储
+        window.onload = function() {
+            loadDataFromStorage();
+        };
+
+        // 从本地存储加载数据
+        function loadDataFromStorage() {
+            const savedMainData = localStorage.getItem('instrumentMainData');
+            const savedMappingData = localStorage.getItem('instrumentMappingData');
+
+            if (savedMainData) {
+                mainData = JSON.parse(savedMainData);
+                isMainDataLoaded = true;
+                document.getElementById('mainFileInfo').textContent = '✓ 已从系统加载 (' + mainData.length + '条记录)';
+            }
+
+            if (savedMappingData) {
+                mappingData = JSON.parse(savedMappingData);
+                isMappingDataLoaded = true;
+                document.getElementById('mappingFileInfo').textContent = '✓ 已从系统加载 (' + mappingData.length + '条记录)';
+            }
+
+            updateDataStatus();
+        }
+
+        // 更新数据状态显示
+        function updateDataStatus() {
+            const mainStatus = document.getElementById('mainDataStatus');
+            const mappingStatus = document.getElementById('mappingDataStatus');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (isMainDataLoaded) {
+                mainStatus.className = 'status-item ready';
+                mainStatus.innerHTML = '<span class="status-icon">✅</span><span>主数据：已加载 (' + mainData.length + '条)</span>';
+            } else {
+                mainStatus.className = 'status-item pending';
+                mainStatus.innerHTML = '<span class="status-icon">⏳</span><span>主数据：未加载</span>';
+            }
+
+            if (isMappingDataLoaded) {
+                mappingStatus.className = 'status-item ready';
+                mappingStatus.innerHTML = '<span class="status-icon">✅</span><span>匹配数据：已加载 (' + mappingData.length + '条)</span>';
+            } else {
+                mappingStatus.className = 'status-item pending';
+                mappingStatus.innerHTML = '<span class="status-icon">⏳</span><span>匹配数据：未加载</span>';
+            }
+
+            // 两个数据都加载后才能保存
+            saveBtn.disabled = !(isMainDataLoaded && isMappingDataLoaded);
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'error-msg' : 'success-msg';
+            div.textContent = message;
+            messageArea.appendChild(div);
+
+            setTimeout(() => {
+                div.remove();
+            }, 5000);
+        }
+
+        // 解析Excel/CSV文件
+        function parseFile(file, callback) {
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.csv')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim());
+                    if (lines.length < 2) {
+                        callback(new Error('CSV文件格式错误'), null);
+                        return;
+                    }
+                    
+                    const headers = lines[0].split(',').map(h => h.trim());
+                    const data = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(',');
+                        const row = {};
+                        headers.forEach((header, index) => {
+                            row[header] = values[index] ? values[index].trim() : '';
+                        });
+                        data.push(row);
+                    }
+                    
+                    callback(null, data);
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        let allData = [];
+                        workbook.SheetNames.forEach(sheetName => {
+                            const worksheet = workbook.Sheets[sheetName];
+                            const sheetData = XLSX.utils.sheet_to_json(worksheet);
+                            allData = allData.concat(sheetData);
+                        });
+                        
+                        callback(null, allData);
+                    } catch (error) {
+                        callback(error, null);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                callback(new Error('不支持的文件格式'), null);
+            }
+        }
+
+        // 处理主数据文件上传
+        document.getElementById('mainDataFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('mainFileInfo').innerHTML = '<div class="loading"></div> 正在加载...';
+
+            parseFile(file, function(error, data) {
+                if (error) {
+                    showMessage('主数据文件解析失败: ' + error.message, 'error');
+                    document.getElementById('mainFileInfo').textContent = '';
+                    return;
+                }
+
+                mainData = data;
+                isMainDataLoaded = true;
+                
+                document.getElementById('mainFileInfo').textContent = '✓ 已加载: ' + file.name + ' (' + data.length + '条记录)';
+                updateDataStatus();
+                showDataPreview();
+            });
+        });
+
+        // 处理匹配数据文件上传
+        document.getElementById('mappingDataFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('mappingFileInfo').innerHTML = '<div class="loading"></div> 正在加载...';
+
+            parseFile(file, function(error, data) {
+                if (error) {
+                    showMessage('匹配数据文件解析失败: ' + error.message, 'error');
+                    document.getElementById('mappingFileInfo').textContent = '';
+                    return;
+                }
+
+                mappingData = data;
+                isMappingDataLoaded = true;
+                
+                document.getElementById('mappingFileInfo').textContent = '✓ 已加载: ' + file.name + ' (' + data.length + '条记录)';
+                updateDataStatus();
+                showDataPreview();
+            });
+        });
+
+        // 显示数据预览
+        function showDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            const content = document.getElementById('previewContent');
+            
+            if (!isMainDataLoaded && !isMappingDataLoaded) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            
+            if (isMainDataLoaded && mainData.length > 0) {
+                html += '<h4>主数据预览</h4>';
+                html += '<table class="preview-table"><thead><tr>';
+                const headers = Object.keys(mainData[0]);
+                headers.slice(0, 5).forEach(h => html += '<th>' + h + '</th>');
+                html += '</tr></thead><tbody>';
+                
+                mainData.slice(0, 5).forEach(row => {
+                    html += '<tr>';
+                    headers.slice(0, 5).forEach(h => {
+                        html += '<td>' + (row[h] || '-') + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            if (isMappingDataLoaded && mappingData.length > 0) {
+                html += '<h4 style="margin-top: 20px;">匹配数据预览</h4>';
+                html += '<table class="preview-table"><thead><tr>';
+                const headers = Object.keys(mappingData[0]);
+                headers.forEach(h => html += '<th>' + h + '</th>');
+                html += '</tr></thead><tbody>';
+                
+                mappingData.slice(0, 5).forEach(row => {
+                    html += '<tr>';
+                    headers.forEach(h => {
+                        html += '<td>' + (row[h] || '-') + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            content.innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        // 压缩数据
+        function compressData(data) {
+            // 只保留必要的字段，减少数据量
+            const essentialFields = {
+                serialNumber: ['主机序列号', 'SN', '序列号', 'Serial Number', '仪器序列号', '设备序列号', 'S/N', 's/n', 'column_5'],
+                materialNumber: ['物料号', '主板物料号', '主板编号', '板号', 'Board Number', 'MB', 'Part Number', '主板IPN', 'IPN']
+            };
+            
+            return data.map(record => {
+                const compressed = {};
+                
+                // 查找序列号
+                for (let field of essentialFields.serialNumber) {
+                    if (record[field] !== undefined && record[field] !== '') {
+                        compressed.sn = record[field];
+                        break;
+                    }
+                }
+                
+                // 查找物料号
+                for (let field of essentialFields.materialNumber) {
+                    if (record[field] !== undefined && record[field] !== '') {
+                        compressed.mn = record[field];
+                        break;
+                    }
+                }
+                
+                return compressed;
+            }).filter(r => r.sn); // 只保留有序列号的记录
+        }
+
+        // 压缩匹配数据
+        function compressMappingData(data) {
+            const essentialFields = {
+                materialNumber: ['物料号', '主板物料号', '主板编号', '板号', 'Board Number', 'MB', 'Part Number', '主板IPN', 'IPN'],
+                model: ['型号', '主板型号', 'Model', 'Board Model'],
+                softwareVersion: ['可安装软件版本', '软件版本', 'Software Version', '版本']
+            };
+            
+            return data.map(record => {
+                const compressed = {};
+                
+                // 查找物料号
+                for (let field of essentialFields.materialNumber) {
+                    if (record[field] !== undefined && record[field] !== '') {
+                        compressed.mn = record[field];
+                        break;
+                    }
+                }
+                
+                // 查找型号
+                for (let field of essentialFields.model) {
+                    if (record[field] !== undefined && record[field] !== '') {
+                        compressed.md = record[field];
+                        break;
+                    }
+                }
+                
+                // 查找软件版本
+                for (let field of essentialFields.softwareVersion) {
+                    if (record[field] !== undefined && record[field] !== '') {
+                        compressed.sv = record[field];
+                        break;
+                    }
+                }
+                
+                return compressed;
+            }).filter(r => r.mn); // 只保留有物料号的记录
+        }
+
+        // 保存数据到本地存储
+        function saveData() {
+            if (!isMainDataLoaded || !isMappingDataLoaded) {
+                showMessage('请先上传两个数据文件', 'error');
+                return;
+            }
+
+            try {
+                // 清除旧数据
+                localStorage.removeItem('instrumentMainData');
+                localStorage.removeItem('instrumentMappingData');
+                localStorage.removeItem('instrumentDataLastUpdated');
+                
+                // 压缩数据
+                const compressedMainData = compressData(mainData);
+                const compressedMappingData = compressMappingData(mappingData);
+                
+                console.log('原始主数据:', mainData.length, '条');
+                console.log('压缩后主数据:', compressedMainData.length, '条');
+                console.log('原始匹配数据:', mappingData.length, '条');
+                console.log('压缩后匹配数据:', compressedMappingData.length, '条');
+                
+                // 估算数据大小
+                const mainDataStr = JSON.stringify(compressedMainData);
+                const mappingDataStr = JSON.stringify(compressedMappingData);
+                const totalSize = (mainDataStr.length + mappingDataStr.length) / 1024 / 1024;
+                
+                console.log('主数据大小:', (mainDataStr.length / 1024).toFixed(2), 'KB');
+                console.log('匹配数据大小:', (mappingDataStr.length / 1024).toFixed(2), 'KB');
+                console.log('总大小:', totalSize.toFixed(2), 'MB');
+                
+                if (totalSize > 4) {
+                    showMessage('数据量过大（' + totalSize.toFixed(2) + 'MB），建议只保留最近的数据或联系技术支持', 'error');
+                    return;
+                }
+                
+                localStorage.setItem('instrumentMainData', mainDataStr);
+                localStorage.setItem('instrumentMappingData', mappingDataStr);
+                localStorage.setItem('instrumentDataLastUpdated', new Date().toLocaleString());
+                
+                showMessage('数据已成功保存到系统！（压缩后' + totalSize.toFixed(2) + 'MB）客户现在可以在查询界面使用这些数据。', 'success');
+            } catch (error) {
+                showMessage('保存数据失败: ' + error.message + '。建议只导入最近几个月的数据。', 'error');
+                console.error('保存错误:', error);
+            }
+        }
+
+        // 清除所有数据
+        function clearData() {
+            if (confirm('确定要清除所有数据吗？此操作不可恢复。')) {
+                localStorage.removeItem('instrumentMainData');
+                localStorage.removeItem('instrumentMappingData');
+                localStorage.removeItem('instrumentDataLastUpdated');
+                
+                mainData = [];
+                mappingData = [];
+                isMainDataLoaded = false;
+                isMappingDataLoaded = false;
+                
+                document.getElementById('mainFileInfo').textContent = '';
+                document.getElementById('mappingFileInfo').textContent = '';
+                document.getElementById('dataPreview').style.display = 'none';
+                
+                updateDataStatus();
+                showMessage('所有数据已清除', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
